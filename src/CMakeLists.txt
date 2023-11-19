@@ -12,14 +12,14 @@ set(HEADERS
     "access/public/access.h"
     "auth/public/auth.h")
 
-set(EXECUTABLES
-    "main")
+set(MAIN_FILE "main.c")
+set(EXECUTABLE "${PROJECT_NAME}App")
 
+# libs
 add_library(${PROJECT_NAME} STATIC ${SOURCE})
-target_link_libraries(${TEST} ${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
 
-target_include_directories(${PROJECT_NAME} PUBLIC PUBLIC_DIRS)
+target_include_directories(${PROJECT_NAME} PUBLIC ${PUBLIC_DIRS})
 
 install(
     TARGETS ${PROJECT_NAME}
@@ -29,7 +29,6 @@ install(
     PUBLIC_HEADER DESTINATION include
 )
 
-foreach(EXECUTABLE ${EXECUTABLES})
-    add_executable(${EXECUTABLE} "${EXECUTABLE}.c")
-    target_link_libraries(${EXECUTABLE} ${PROJECT_NAME} m)
-endforeach()
+# application
+add_executable(${EXECUTABLE} ${MAIN_FILE})
+target_link_libraries(${EXECUTABLE} ${PROJECT_NAME} m)
