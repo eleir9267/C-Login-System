@@ -3,3 +3,9 @@
  *
  */
 #include "enroll.h"
+
+#include <openssl/epv.h>
+
+authenticate_t enroll() {
+    return AUTH_SUCCESS;
+}

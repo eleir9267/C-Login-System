@@ -5,4 +5,8 @@
 #ifndef LOGIN_H
 #define LOGIN_H
 
+#include <auth/retcodes.h>
+
+authenticate_t login();
+
 #endif

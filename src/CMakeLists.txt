@@ -1,3 +1,5 @@
+find_package(OpenSSL REQUIRED)
+
 set(PUBLIC_DIRS
     "access/public"
     "auth/public")
@@ -9,7 +11,8 @@ set(SOURCE
     "access/access.c")
 
 set(HEADERS
-    "access/public/access.h"
+    "access/public/auth/retcodes.h"
+    "access/public/auth/access.h"
     "auth/public/auth.h")
 
 set(MAIN_FILE "main.c")
@@ -31,4 +34,5 @@ install(
 
 # application
 add_executable(${EXECUTABLE} ${MAIN_FILE})
-target_link_libraries(${EXECUTABLE} ${PROJECT_NAME} m)
+target_include_directories(${PROJECT_NAME} PUBLIC ${OPENSSL_INCLUDE_DIR})
+target_link_libraries(${EXECUTABLE} ${PROJECT_NAME} m ${OPENSSL_LIBRARIES})

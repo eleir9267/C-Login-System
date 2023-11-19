@@ -2,10 +2,10 @@
  * @brief Entrypoint to the application.
  *
  */
-#include <stdlib.h>
-
-#include <auth.h>
+#include <auth/auth.h>
 #include <access.h>
+
+#include <stdlib.h>
 
 int main(void) {
     return EXIT_SUCCESS;
