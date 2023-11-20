@@ -8,5 +8,7 @@
 #include <stdlib.h>
 
 int main(void) {
+    printf("Finvest Holdings\n");
+    printf("Client Holdings and Information System\n");
     return EXIT_SUCCESS;
 }
