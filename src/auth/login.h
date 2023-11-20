@@ -7,6 +7,6 @@
 
 #include <auth/retcodes.h>
 
-authenticate_t login();
+authenticate_t login(const char *username, const char *password);
 
 #endif

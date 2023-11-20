@@ -5,6 +5,6 @@
 #ifndef AUTH_AUTH_H
 #define AUTH_AUTH_H
 
-void authenticate();
+int authenticate();
 
 #endif

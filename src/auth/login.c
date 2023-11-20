@@ -3,9 +3,13 @@
  *
  */
 #include "login.h"
+#include <common.h>
 
-#include <openssl/epv.h>
+#include <openssl/evp.h>
 
-authenticate_t login() {
+authenticate_t login(const char *username, const char *password) {
+    UNUSED(username);
+    UNUSED(password);
+
     return AUTH_SUCCESS;
 }

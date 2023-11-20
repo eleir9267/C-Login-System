@@ -7,6 +7,6 @@
 
 #include <auth/retcodes.h>
 
-authenticate_t enroll();
+authenticate_t enroll(const char *username, const char *password);
 
 #endif
