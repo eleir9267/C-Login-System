@@ -14,7 +14,8 @@ typedef enum authenticate_t {
     AUTH_SPECIAL,
     AUTH_BAD_LEN,
     AUTH_COMMON,
-    AUTH_USERNAME
+    AUTH_USERNAME,
+    AUTH_BAD_CHAR
 } authenticate_t;
 
 #endif

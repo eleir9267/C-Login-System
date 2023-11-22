@@ -29,7 +29,7 @@ static const char* common_passwords[] = {
 // regex pattern
 static const char* prohibited_format_pattern = "";
 
-/**Checks if a password is valid.
+/**Checks if a credentials are valid.
  * Checks several criterion:
  *  - PW_MIN_CHARS < len(password) < PW_MAX_CHARS
  *  - The password contains one uppercase letter
@@ -39,11 +39,12 @@ static const char* prohibited_format_pattern = "";
  *  - The password is not identical to the username
  *  - The password is not a common weak password
  *  - The password is not a prohibited format
+ *  - The username and password only contain valid ASCII characters
  *  @param username[in] The username.
  *  @param password[in] The password to validate.
  *  @return The authentication status of the password.
  */
-authenticate_t validate_password(const char *username, const char *password) {
+authenticate_t validate_cred(const char *username, const char *password) {
     regex_t prohibited_format_reg;
     int errcode;
     size_t special_chars_len = sizeof(special_chars) / sizeof(special_chars[0]);
@@ -58,9 +59,13 @@ authenticate_t validate_password(const char *username, const char *password) {
     int i;
     size_t j;
 
-    // Check that it contains the required chars.
+    // Check that it contains the required chars and only valid ASCII.
     i = 0;
     while ((i < STR_MAX) && (password[i] != '\0')) {
+        if (!((PW_ASCII_START < password[i]) && (password[i] < PW_ASCII_END))) {
+            return AUTH_BAD_CHAR;
+        }
+
         if (!upper_found && ('A' < password[i]) && (password[i] < 'Z')) {
             upper_found = true;
         }
@@ -98,6 +103,17 @@ authenticate_t validate_password(const char *username, const char *password) {
     if (!((PW_MIN_CHARS < i) && (i < PW_MAX_CHARS))) {
         return AUTH_BAD_LEN; 
     }
+
+    // Ensure that username only contains valid ASCII
+    i = 0;
+    while ((i < STR_MAX) && (username[i] != '\0')) {
+        if (!((PW_ASCII_START < username[i]) && (username[i] < PW_ASCII_END))) {
+            return AUTH_BAD_CHAR;
+        }
+
+        ++i;
+    }
+
 
     // Match against username.
     match = true;
@@ -161,7 +177,7 @@ authenticate_t enroll(const char *username, const char *password) {
     UNUSED(username);
     authenticate_t ret;
 
-    ret = validate_password(username, password);
+    ret = validate_cred(username, password);
     if (ret != AUTH_SUCCESS) {
         return ret;
     }
