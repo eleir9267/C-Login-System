@@ -99,11 +99,52 @@ int authenticate() {
                     printf("Failed to set terminal to echo.\n");
                     return -1;
                 }
-                if ((result = enroll(username, password)) == AUTH_SUCCESS) {
+                switch (enroll(username, password)) {
+                case AUTH_SUCCESS:
                     valid = true;
-                } else {
+                    break;
+                case AUTH_UPPER:
+                    printf("Missing uppercase character in password.\n");
+                    printf("\n\n");
+                    break;
+                case AUTH_LOWER:
+                    printf("Missing lowercase character in password.\n");
+                    printf("\n\n");
+                    break;
+                case AUTH_NUMBER:
+                    printf("Missing numeric character in password.\n");
+                    printf("\n\n");
+                    break;
+                case AUTH_SPECIAL:
+                    printf("Missing special character in password.\n");
+                    printf("\n\n");
+                    break;
+                case AUTH_BAD_LEN:
+                    printf("Password is not the correct length. (between"
+                           + " %d and %d characters)\n", PW_MIN_CHARS,
+                           PW_MAX_CHARS);
+                    printf("\n\n");
+                    break;
+                case AUTH_COMMON:
+                    printf("Password is a common weak password.\n");
+                    printf("\n\n");
+                    break;
+                case AUTH_USERNAME:
+                    printf("Username and password are the same.\n");
+                    printf("\n\n");
+                    break;
+                case AUTH_BAD_CHAR:
+                    printf("Password contains an invalid ASCII character.\n");
+                    printf("\n\n");
+                    break;
+                case AUTH_INVALID:
+                    // Enrollment shouldn't reach here.
                     printf("Invalid username or password.\n");
                     printf("\n\n");
+                case AUTH_FATAL:
+                default:
+                    printf("Failed to communicate with enrollment system.\n");
+                    return -1;
                 }
             }
             printf("You have successfully enrolled.\n");
@@ -159,9 +200,12 @@ int authenticate() {
                     valid = true;
                     break;
                 case AUTH_INVALID:
-                default:
                     printf("Invalid username or password.\n");
                     printf("\n\n");
+                case AUTH_FATAL:
+                default:
+                    printf("Failed to communicate with login system.\n");
+                    return -1;
                 }
             }
             printf("You have successfully logged in.\n");

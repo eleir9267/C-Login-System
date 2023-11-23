@@ -8,6 +8,7 @@
 typedef enum authenticate_t {
     AUTH_SUCCESS = 0,
     AUTH_INVALID,
+    AUTH_FATAL,
     AUTH_UPPER,
     AUTH_LOWER,
     AUTH_NUMBER,

@@ -27,7 +27,9 @@ static const char* common_passwords[] = {
 }
 
 // regex pattern
-static const char* prohibited_format_pattern = "";
+static const char* prohibited_format_pattern = "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)_([1-3]?[0-9])_[0-9]*"
+    + "|/\d{3,4}/-/\d{3}/-/\d{4}/"
+    + "|([A-Z]|[0-9]){3}_([A-Z]|[0-9]){3}";
 
 /**Checks if a credentials are valid.
  * Checks several criterion:
@@ -38,7 +40,7 @@ static const char* prohibited_format_pattern = "";
  *  - The password contains one special char
  *  - The password is not identical to the username
  *  - The password is not a common weak password
- *  - The password is not a prohibited format
+ *  - The password does not contain a prohibited format
  *  - The username and password only contain valid ASCII characters
  *  @param username[in] The username.
  *  @param password[in] The password to validate.
@@ -133,7 +135,7 @@ authenticate_t validate_cred(const char *username, const char *password) {
         return AUTH_USERNAME;
     }
 
-    // Match against prohibited strings.
+    // Match against common passwords.
     printf("Debug: common_passwords_len=%d\n", common_passwords_len);
     j = 0;
     while (j < common_passwords_len) {
@@ -160,7 +162,7 @@ authenticate_t validate_cred(const char *username, const char *password) {
     // Compile regex.
     errcode = regcomp(&prohibited_format_reg, prohibited_format_pattern, 0);
     if (errcode) {
-        return AUTH_INVALID;
+        return AUTH_FATAL;
     }
 
     // Match against prohibited formats.
