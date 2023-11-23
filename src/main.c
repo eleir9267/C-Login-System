@@ -2,8 +2,8 @@
  * @brief Entrypoint to the application.
  *
  */
-#include <auth/auth.h>
-#include <access.h>
+#include <fh/auth/auth.h>
+#include <fh/access/access.h>
 
 #include <stdio.h>
 #include <stdlib.h>

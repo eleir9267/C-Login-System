@@ -3,7 +3,7 @@
  *
  */
 #include "enroll.h"
-#include <common.h>
+#include <fh/common.h>
 
 #include <string.h>
 #include <stdbool.h>

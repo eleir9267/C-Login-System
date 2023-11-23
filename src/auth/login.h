@@ -5,7 +5,7 @@
 #ifndef LOGIN_H
 #define LOGIN_H
 
-#include <auth/retcodes.h>
+#include "retcodes.h"
 
 authenticate_t login(const char *username, const char *password);
 

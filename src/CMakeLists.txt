@@ -12,9 +12,8 @@ set(SOURCE
     "access/access.c")
 
 set(HEADERS
-    "access/public/access.h"
-    "auth/public/auth/auth.h"
-    "auth/public/auth/retcodes.h")
+    "access/public/fh/access/access.h"
+    "auth/public/fh/auth/auth.h")
 
 set(MAIN_FILE "main.c")
 set(EXECUTABLE "${PROJECT_NAME}App")

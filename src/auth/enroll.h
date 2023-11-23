@@ -5,7 +5,7 @@
 #ifndef ENROLL_H
 #define ENROLL_H
 
-#include <auth/retcodes.h>
+#include "retcodes.h"
 
 #define PW_MIN_CHARS 8
 #define PW_MAX_CHARS 12

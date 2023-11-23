@@ -2,11 +2,11 @@
  * @brief Implements the forward facing APIs for authentication.
  *
  */
-#include <auth/auth.h>
-#include <auth/retcodes.h>
-#include <common.h>
+#include <fh/auth/auth.h>
+#include <fh/common.h>
 #include "enroll.h"
 #include "login.h"
+#include "retcodes.h"
 
 #include <stdio.h>
 #include <stdint.h>
