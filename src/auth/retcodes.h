@@ -16,7 +16,9 @@ typedef enum authenticate_t {
     AUTH_BAD_LEN,
     AUTH_COMMON,
     AUTH_USERNAME,
-    AUTH_BAD_CHAR
+    AUTH_FORMAT,
+    AUTH_BAD_CHAR,
+    AUTH_EXISTING
 } authenticate_t;
 
 #endif

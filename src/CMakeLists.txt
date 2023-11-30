@@ -13,7 +13,8 @@ set(SOURCE
 
 set(HEADERS
     "access/public/fh/access/access.h"
-    "auth/public/fh/auth/auth.h")
+    "auth/public/fh/auth/auth.h"
+    "public/fh/common.h")
 
 set(MAIN_FILE "main.c")
 set(EXECUTABLE "${PROJECT_NAME}App")

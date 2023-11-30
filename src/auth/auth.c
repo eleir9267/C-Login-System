@@ -60,7 +60,6 @@ int authenticate() {
                 struct termios original_flags, quiet_flags;
                 char username[STR_MAX];
                 char password[STR_MAX];
-                authenticate_t result;
 
                 // Setup struct that lets stdin know to not show the typed
                 // chars.
@@ -121,7 +120,7 @@ int authenticate() {
                     break;
                 case AUTH_BAD_LEN:
                     printf("Password is not the correct length. (between"
-                           + " %d and %d characters)\n", PW_MIN_CHARS,
+                           " %d and %d characters)\n", PW_MIN_CHARS,
                            PW_MAX_CHARS);
                     printf("\n\n");
                     break;
@@ -137,10 +136,16 @@ int authenticate() {
                     printf("Password contains an invalid ASCII character.\n");
                     printf("\n\n");
                     break;
+                case AUTH_FORMAT:
+                    printf("Password contains a format that is not permitted."
+                           " (such as a phone number)\n");
+                    printf("\n\n");
+                    break;
                 case AUTH_INVALID:
                     // Enrollment shouldn't reach here.
                     printf("Invalid username or password.\n");
                     printf("\n\n");
+                    break;
                 case AUTH_FATAL:
                 default:
                     printf("Failed to communicate with enrollment system.\n");
@@ -202,6 +207,7 @@ int authenticate() {
                 case AUTH_INVALID:
                     printf("Invalid username or password.\n");
                     printf("\n\n");
+                    break;
                 case AUTH_FATAL:
                 default:
                     printf("Failed to communicate with login system.\n");

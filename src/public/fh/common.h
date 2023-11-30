@@ -5,7 +5,7 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#define STR_MAX 13
+#define STR_MAX 64
 
 #define UNUSED(x) (void) x
 

@@ -3,11 +3,11 @@
  *
  */
 #include "enroll.h"
+#include "pfile.h"
 #include <fh/common.h>
 
 #include <string.h>
 #include <stdbool.h>
-#include <openssl/evp.h>
 #include <regex.h>
 
 static char special_chars[] = {
@@ -18,22 +18,22 @@ static char special_chars[] = {
     '%',
     '?',
     '*'
-}
+};
 
 static const char* common_passwords[] = {
     "Password1#",
     "Qwerty123?",
     "!Qaz123wsx"
-}
+};
 
 // regex pattern
 static const char* prohibited_format_pattern = "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)_([1-3]?[0-9])_[0-9]*"
-    + "|/\d{3,4}/-/\d{3}/-/\d{4}/"
-    + "|([A-Z]|[0-9]){3}_([A-Z]|[0-9]){3}";
+    "|/\\d{3,4}/-/\\d{3}/-/\\d{4}/"
+    "|([A-Z]|[0-9]){3}_([A-Z]|[0-9]){3}";
 
 /**Checks if a credentials are valid.
  * Checks several criterion:
- *  - PW_MIN_CHARS < len(password) < PW_MAX_CHARS
+ *  - PW_MIN_CHARS <= len(password) <= PW_MAX_CHARS
  *  - The password contains one uppercase letter
  *  - The password contains one lowercase letter
  *  - The password contains one numeric char
@@ -68,18 +68,17 @@ authenticate_t validate_cred(const char *username, const char *password) {
             return AUTH_BAD_CHAR;
         }
 
-        if (!upper_found && ('A' < password[i]) && (password[i] < 'Z')) {
+        if (!upper_found && ('A' <= password[i]) && (password[i] <= 'Z')) {
             upper_found = true;
         }
-        if (!lower_found && ('a' < password[i]) && (password[i] < 'z')) {
+        if (!lower_found && ('a' <= password[i]) && (password[i] <= 'z')) {
             lower_found = true;
         }
-        if (!number_found && ('0' < password[i]) && (password[i] < '9')) {
+        if (!number_found && ('0' <= password[i]) && (password[i] <= '9')) {
             number_found = true;
         }
 
         // Check for special characters.
-        printf("Debug: special_chars_len=%d\n", special_chars_len);
         j = 0;
         while (!special_found && (j < special_chars_len)) {
             if (password[i] == special_chars[j]) {
@@ -102,8 +101,8 @@ authenticate_t validate_cred(const char *username, const char *password) {
     }
 
     // Enforce length boundaries.
-    if (!((PW_MIN_CHARS < i) && (i < PW_MAX_CHARS))) {
-        return AUTH_BAD_LEN; 
+    if (!((PW_MIN_CHARS <= i) && (i <= PW_MAX_CHARS))) {
+        return AUTH_BAD_LEN;
     }
 
     // Ensure that username only contains valid ASCII
@@ -130,13 +129,12 @@ authenticate_t validate_cred(const char *username, const char *password) {
     }
 
     // Return error if there was a match and there are no trailing chars.
-    if (match && (!(i < STR_MAX) || (password[i] == '\0')
-        && (common_passwords[j][i] == '\0'))) {
+    if (match && (!(i < STR_MAX) || ((password[i] == '\0')
+        && (username[i] == '\0')))) {
         return AUTH_USERNAME;
     }
 
     // Match against common passwords.
-    printf("Debug: common_passwords_len=%d\n", common_passwords_len);
     j = 0;
     while (j < common_passwords_len) {
         match = true;
@@ -151,8 +149,8 @@ authenticate_t validate_cred(const char *username, const char *password) {
         }
 
         // Return error if there was a match and there are no trailing chars.
-        if (match && (!(i < STR_MAX) || (password[i] == '\0')
-            && (common_passwords[j][i] == '\0'))) {
+        if (match && (!(i < STR_MAX) || ((password[i] == '\0')
+            && (common_passwords[j][i] == '\0')))) {
             return AUTH_COMMON;
         }
 
@@ -175,11 +173,48 @@ authenticate_t validate_cred(const char *username, const char *password) {
     return AUTH_SUCCESS;
 }
 
-authenticate_t enroll(const char *username, const char *password) {
+/**Registers the user's credentials in a password file.
+ *
+ * @param username[in] The user's username.
+ * @param password[in] The user's password.
+ * @return The authentication status of the request.
+ */
+authenticate_t register_cred(const char *username, const char *password) {
     UNUSED(username);
+    UNUSED(password);
+    authenticate_t ret;
+    int fd;
+
+    ret = get_pfile(&fd)
+    if (ret != AUTH_SUCCESS) {
+        return ret;
+    }
+
+    ret = pfile_find_entry(fd);
+    if (ret != AUTH_SUCCESS) {
+        return ret;
+    }
+
+    // Add entry
+
+    return ret;
+}
+
+/**Enrolls the user if their credentials are valid.
+ *
+ * @param username[in] The user's username.
+ * @param password[in] The user's password.
+ * @return The authentication status of the request.
+ */
+authenticate_t enroll(const char *username, const char *password) {
     authenticate_t ret;
 
     ret = validate_cred(username, password);
+    if (ret != AUTH_SUCCESS) {
+        return ret;
+    }
+
+    ret = register_cred(username, password);
     if (ret != AUTH_SUCCESS) {
         return ret;
     }
