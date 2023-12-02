@@ -65,8 +65,8 @@ int authenticate() {
                 // chars.
                 tcgetattr(fileno(stdin), &original_flags);
                 quiet_flags = original_flags;
-                quiet_flags.c_lflag |= ECHONL; 
-                quiet_flags.c_lflag &= ~ECHO; 
+                quiet_flags.c_lflag |= ECHONL;
+                quiet_flags.c_lflag &= ~ECHO;
 
                 printf("Enroll\n");
                 printf("Please enter a username and password.\n");
@@ -142,8 +142,7 @@ int authenticate() {
                     printf("\n\n");
                     break;
                 case AUTH_INVALID:
-                    // Enrollment shouldn't reach here.
-                    printf("Invalid username or password.\n");
+                    printf("An account with that username already exists.\n");
                     printf("\n\n");
                     break;
                 case AUTH_FATAL:
@@ -167,8 +166,8 @@ int authenticate() {
                 // chars.
                 tcgetattr(fileno(stdin), &original_flags);
                 quiet_flags = original_flags;
-                quiet_flags.c_lflag |= ECHONL; 
-                quiet_flags.c_lflag &= ~ECHO; 
+                quiet_flags.c_lflag |= ECHONL;
+                quiet_flags.c_lflag &= ~ECHO;
 
                 printf("Login\n");
                 printf("Please enter your username and password.\n");

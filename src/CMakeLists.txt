@@ -9,6 +9,7 @@ set(SOURCE
     "auth/auth.c"
     "auth/login.c"
     "auth/enroll.c"
+    "auth/pfile.c"
     "access/access.c")
 
 set(HEADERS

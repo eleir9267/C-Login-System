@@ -3,13 +3,14 @@
  *
  */
 #include "pfile.h"
+#include "enroll.h"
 #include <fh/common.h>
 
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <fnctl.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <openssl/evp.h>
 #include <openssl/crypto.h>
@@ -23,9 +24,9 @@
 #define HASH_ALG EVP_sha256()
 #endif
 
-#define get_salt_len() EVP_MD_size(HASH_ALG)
+#define get_hash_len() EVP_MD_size(HASH_ALG)
+#define get_salt_len() get_hash_len()
 
-// TODO: Maybe chars should be unsigned.
 /**Calculates the resulting hash for a given password and salt, using HASH_ALG
  * as the hash algorithm.
  * @param password[in] the user's password.
@@ -38,7 +39,7 @@
  */
 authenticate_t calculate_hash(const char *password, const size_t password_len,
                               const char *salt, const size_t salt_len,
-                              char **hash, unsigned int *hash_len) {
+                              uchar_t **hash, unsigned int *hash_len) {
     EVP_MD_CTX *evp_context;
     char buff[STR_MAX];
     int err;
@@ -60,12 +61,12 @@ authenticate_t calculate_hash(const char *password, const size_t password_len,
     }
 
     // Prepend the salt.
-    memset(buff, salt, get_salt_len());
-    memset(buff + salt_len, password, password_len);
+    memcpy(buff, salt, get_salt_len());
+    memcpy(buff + salt_len, password, password_len);
 
     err = EVP_DigestUpdate(evp_context, buff, salt_len + password_len);
 
-    *hash = OPENSSL_malloc(EVP_MD_size(HASH_ALG));
+    *hash = OPENSSL_malloc(get_hash_len());
     if (*hash == NULL) {
         EVP_MD_CTX_free(evp_context);
         return AUTH_FATAL;
@@ -85,7 +86,7 @@ authenticate_t calculate_hash(const char *password, const size_t password_len,
  * @param hash[in] the hash to free.
  * @return the authentication status of the request.
  */
-authenticate_t free_hash(char *hash) {
+authenticate_t free_hash(uchar_t *hash) {
     OPENSSL_free(hash);
 
     return AUTH_SUCCESS;
@@ -97,7 +98,8 @@ authenticate_t free_hash(char *hash) {
  * @return the authentication status of the request.
  */
 authenticate_t create_salt(char *buff, size_t len) {
-    if (len != getrandom(buff, len, 0)) {
+    ssize_t count;
+    if (((count = getrandom(buff, len, 0)) == -1) || ((size_t) count != len)) {
         return AUTH_FATAL;
     }
 
@@ -117,10 +119,10 @@ authenticate_t get_pfile(int *fd, int flags) {
     char pfile_path[PATH_MAX];
     int n;
     struct stat stat_result;
-    mode_t perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWRGRP;
+    mode_t perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
     int err;
 
-    n = snprintf(pfile_path, PATH_MAX, "%s/.finvestholdings", home_dir);
+    n = snprintf(pfile_path, PATH_MAX, "%s/.fhpwdummy0", home_dir);
     if ((n == -1) || (n >= PATH_MAX)) {
         return AUTH_FATAL;
     }
@@ -134,7 +136,7 @@ authenticate_t get_pfile(int *fd, int flags) {
         }
 
         // Set length of file.
-        err = ftruncate(fd, PFILE_LEN);
+        err = ftruncate(*fd, PFILE_LEN);
         if (err != 0) {
             close(*fd);
             return AUTH_FATAL;
@@ -161,36 +163,36 @@ authenticate_t get_pfile(int *fd, int flags) {
  */
 authenticate_t write_pfile_entry(const char *username, const char *password) {
     size_t salt_len = get_salt_len();
-    char *salt[salt_len];
-    char *hash;
+    char salt[salt_len];
+    uchar_t *hash;
     unsigned int hash_len;
-    char *entry[STR_MAX];
+    char entry[STR_MAX];
     char *c = entry;
-    ssize_t n;
     ssize_t write_len;
     int fd;
     authenticate_t ret;
-
-    password_len = strnlen(password, STR_MAX);
 
     ret = create_salt(salt, salt_len);
     if (ret != AUTH_SUCCESS) {
         return ret;
     }
 
-    ret = calculate_hash(password, password_len, salt, salt_len, &hash,
-                         &hash_len);
+    ret = calculate_hash(password, strnlen(password, STR_MAX), salt, salt_len,
+                         &hash, &hash_len);
     if (ret != AUTH_SUCCESS) {
         return ret;
     }
 
-    // Use tab as separator
-    // (username)\t(salt)\t(hash)
-    n = (ssize_t) snprintf(c, STR_MAX, "%s\t%s\t%s\n", username, salt, hash);
-    if ((n == -1) || (n > STR_MAX)) {
-        free_hash(hash);
-        return AUTH_FATAL;
-    }
+    // Use \0 as separator
+    // (username)\0*(salt)(hash)
+    strncpy(c, username, MIN(UNAME_MAX_CHARS, STR_MAX - (c - entry)));
+    c += MIN(UNAME_MAX_CHARS, STR_MAX - (c - entry));
+
+    memcpy(c, salt, MIN(salt_len, (size_t) STR_MAX - (c - entry)));
+    c += MIN(salt_len, (size_t) STR_MAX - (c - entry));
+
+    memcpy(c, hash, MIN(hash_len, (unsigned int) STR_MAX - (c - entry)));
+    c += MIN(hash_len, (unsigned int) STR_MAX - (c - entry));
 
     ret = get_pfile(&fd, O_WRONLY | O_APPEND);
     if (ret != AUTH_SUCCESS) {
@@ -199,8 +201,8 @@ authenticate_t write_pfile_entry(const char *username, const char *password) {
     }
 
     // Write to pfile...
-    write_len = write(fd, entry, n);
-    if (write_len != n) {
+    write_len = write(fd, entry, (c - entry));
+    if (write_len != (c - entry)) {
         free_hash(hash);
         close(fd);
         return AUTH_FATAL;
@@ -211,56 +213,42 @@ authenticate_t write_pfile_entry(const char *username, const char *password) {
     return ret;
 }
 
-// TODO: Might be better named something else...
-authenticate_t pfile_find_entry(int fd, const char *username, off_t *offset) {
-    FILE *stream;
-    char *line = NULL;
-    size_t len = 0;
+authenticate_t pfile_find_entry(int fd, const char *username,
+                                char *entry, size_t entry_len) {
     ssize_t count_read;
+    bool found = false;
 
-    stream = fdopen(fd, "r");
-    if (stream == NULL) {
-        return AUTH_FATAL;
-    }
-
-    while (!found && ((count_read = getline(&line, &len, stream)) != -1)) {
-        // Make the input easy to parse...
-        for (char *c = line; c != '\0' && ((c - line) < len); ++c) {
-            if ((*c == '\t') || (*c == '\n')) {
-                *c = '\0';
-            }
+    while (!found && (((count_read = read(fd, entry, entry_len)) > 0)
+        || ((count_read == -1) && (errno == EAGAIN)))) {
+        if ((count_read == -1) && (errno == EAGAIN)) {
+            continue;
         }
-
-        // Now we only need the username (i.e. the first element of the line).
-        if (strncmp(line, username, MIN(STR_MAX, len)) == 0) {
+        // Stored in format
+        // (username)\0*(salt)(hash)
+        if(strncmp(entry, username, UNAME_MAX_CHARS) == 0) {
             found = true;
         }
     }
 
-    if (found) {
-        *offset = (off_t) ftell(stream);
-    } else {
-        fclose(stream);
-        free(line);
+    if (!found) {
         return AUTH_INVALID;
     }
 
-    fclose(stream);
-    free(line);
     return AUTH_SUCCESS;
 }
 
 authenticate_t pfile_entry_exists(const char *username) {
     int fd;
-    bool found = false;
-    off_t offset;
+    size_t entry_len = UNAME_MAX_CHARS + get_salt_len() + get_hash_len();
+    char entry[entry_len];
+    authenticate_t ret;
 
     ret = get_pfile(&fd, O_RDONLY);
     if (ret != AUTH_SUCCESS) {
         return ret;
     }
 
-    ret = pfile_find_entry(fd, username, &offset);
+    ret = pfile_find_entry(fd, username, entry, entry_len);
     if (ret != AUTH_SUCCESS) {
         close(fd);
         return ret;
@@ -271,8 +259,46 @@ authenticate_t pfile_entry_exists(const char *username) {
 }
 
 authenticate_t pfile_entry_verify(const char *username, const char *password) {
-    UNUSED(username);
-    UNUSED(password);
+    int fd;
+    size_t entry_len = UNAME_MAX_CHARS + get_salt_len() + get_hash_len();
+    char entry[entry_len];
+    char *entry_hash;
+    char *entry_salt;
+    uchar_t *hash;
+    unsigned int hash_len;
+    authenticate_t ret;
 
+    ret = get_pfile(&fd, O_RDONLY);
+    if (ret != AUTH_SUCCESS) {
+        return ret;
+    }
+
+    ret = pfile_find_entry(fd, username, entry, entry_len);
+    if (ret != AUTH_SUCCESS) {
+        close(fd);
+        return ret;
+    }
+
+    entry_salt = entry + UNAME_MAX_CHARS;
+
+    entry_hash = entry_salt + get_salt_len();
+
+    ret = calculate_hash(password, strnlen(password, STR_MAX), entry_salt,
+                         get_salt_len(), &hash, &hash_len);
+    if (ret != AUTH_SUCCESS) {
+        close(fd);
+        free_hash(hash);
+        return ret;
+    }
+
+    if (memcmp((char *) hash, entry_hash,
+               MIN(hash_len, (unsigned int) get_hash_len())) != 0) {
+        close(fd);
+        free_hash(hash);
+        return AUTH_INVALID;
+    }
+
+    close(fd);
+    free_hash(hash);
     return AUTH_SUCCESS;
 }

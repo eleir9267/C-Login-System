@@ -7,8 +7,5 @@
 #include <fh/common.h>
 
 authenticate_t login(const char *username, const char *password) {
-    UNUSED(username);
-    UNUSED(password);
-
-    return AUTH_SUCCESS;
+    return pfile_entry_verify(username, password);
 }

@@ -100,8 +100,13 @@ authenticate_t validate_cred(const char *username, const char *password) {
         return AUTH_SPECIAL;
     }
 
-    // Enforce length boundaries.
+    // Enforce password length boundaries.
     if (!((PW_MIN_CHARS <= i) && (i <= PW_MAX_CHARS))) {
+        return AUTH_BAD_LEN;
+    }
+
+    // Enforce username length boundaries.
+    if (strnlen(username, STR_MAX) > UNAME_MAX_CHARS) {
         return AUTH_BAD_LEN;
     }
 
@@ -174,28 +179,25 @@ authenticate_t validate_cred(const char *username, const char *password) {
 }
 
 /**Registers the user's credentials in a password file.
- *
+ * Contains all callouts to pfile.h
  * @param username[in] The user's username.
  * @param password[in] The user's password.
  * @return The authentication status of the request.
  */
 authenticate_t register_cred(const char *username, const char *password) {
-    UNUSED(username);
-    UNUSED(password);
     authenticate_t ret;
-    int fd;
 
-    ret = get_pfile(&fd)
-    if (ret != AUTH_SUCCESS) {
-        return ret;
-    }
-
-    ret = pfile_find_entry(fd);
-    if (ret != AUTH_SUCCESS) {
-        return ret;
+    // Check that the entry doesn't already exist before enrollment.
+    ret = pfile_entry_exists(username);
+    if (ret != AUTH_INVALID) {
+        return (ret == AUTH_SUCCESS) ? AUTH_INVALID : ret;
     }
 
     // Add entry
+    ret = write_pfile_entry(username, password);
+    if (ret != AUTH_SUCCESS) {
+        return ret;
+    }
 
     return ret;
 }
