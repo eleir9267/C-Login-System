@@ -3,9 +3,9 @@
  *
  */
 #include <fh/auth/auth.h>
-#include <fh/common.h>
 #include "enroll.h"
 #include "login.h"
+#include "pfile.h"
 #include "retcodes.h"
 
 #include <stdio.h>
@@ -13,6 +13,30 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <termios.h>
+
+int update_role(const char *username, const role_t role) {
+    authenticate_t ret;
+
+    ret = pfile_update_role(username, role);
+    if (ret != AUTH_SUCCESS) {
+        printf("Failed to update the role.\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+int get_role(const char *username, role_t *role) {
+    authenticate_t ret;
+
+    ret = pfile_get_role(username, role);
+    if (ret != AUTH_SUCCESS) {
+        printf("Failed to get the role.\n");
+        return -1;
+    }
+
+    return 0;
+}
 
 /** Terminates the string at the first occurance of a newline ('\n', '\r').
  *
@@ -36,8 +60,9 @@ static void strip_newline(char *str, int n) {
 
 /** Perform user authentication.
  *  Can enroll or login the user.
+ *  @param username[out] the user's chosen username.
  */
-int authenticate() {
+int authenticate(char *username) {
     bool valid = false;
     char auth_opt_str[STR_MAX];
 
@@ -58,7 +83,6 @@ int authenticate() {
             valid = false;
             while(!valid) {
                 struct termios original_flags, quiet_flags;
-                char username[STR_MAX];
                 char password[STR_MAX];
 
                 // Setup struct that lets stdin know to not show the typed
@@ -119,9 +143,10 @@ int authenticate() {
                     printf("\n\n");
                     break;
                 case AUTH_BAD_LEN:
-                    printf("Password is not the correct length. (between"
-                           " %d and %d characters)\n", PW_MIN_CHARS,
-                           PW_MAX_CHARS);
+                    printf("Username or password is not the correct length."
+                           " (username under %d characters, password between %d"
+                           " and %d characters)\n", UNAME_MAX_CHARS,
+                           PW_MIN_CHARS, PW_MAX_CHARS);
                     printf("\n\n");
                     break;
                 case AUTH_COMMON:
@@ -159,7 +184,6 @@ int authenticate() {
             valid = false;
             while(!valid) {
                 struct termios original_flags, quiet_flags;
-                char username[STR_MAX];
                 char password[STR_MAX];
 
                 // Setup struct that lets stdin know to not show the typed

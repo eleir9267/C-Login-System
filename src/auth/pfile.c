@@ -3,8 +3,6 @@
  *
  */
 #include "pfile.h"
-#include "enroll.h"
-#include <fh/common.h>
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -122,7 +120,7 @@ authenticate_t get_pfile(int *fd, int flags) {
     mode_t perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
     int err;
 
-    n = snprintf(pfile_path, PATH_MAX, "%s/.fhpwdummy0", home_dir);
+    n = snprintf(pfile_path, PATH_MAX, "%s/.fhpwdummy1", home_dir);
     if ((n == -1) || (n >= PATH_MAX)) {
         return AUTH_FATAL;
     }
@@ -183,10 +181,12 @@ authenticate_t write_pfile_entry(const char *username, const char *password) {
         return ret;
     }
 
-    // Use \0 as separator
-    // (username)\0*(salt)(hash)
+    // (username)\0*(role)\0*(salt)(hash)
     strncpy(c, username, MIN(UNAME_MAX_CHARS, STR_MAX - (c - entry)));
     c += MIN(UNAME_MAX_CHARS, STR_MAX - (c - entry));
+
+    *c = NO_ROLE;
+    c++;
 
     memcpy(c, salt, MIN(salt_len, (size_t) STR_MAX - (c - entry)));
     c += MIN(salt_len, (size_t) STR_MAX - (c - entry));
@@ -213,8 +213,9 @@ authenticate_t write_pfile_entry(const char *username, const char *password) {
     return ret;
 }
 
+// TODO: Add offset so that entry can be overwritten.
 authenticate_t pfile_find_entry(int fd, const char *username,
-                                char *entry, size_t entry_len) {
+                                char *entry, size_t entry_len, off_t *offset) {
     ssize_t count_read;
     bool found = false;
 
@@ -224,7 +225,7 @@ authenticate_t pfile_find_entry(int fd, const char *username,
             continue;
         }
         // Stored in format
-        // (username)\0*(salt)(hash)
+        // (username)\0*(role)\0*(salt)(hash)
         if(strncmp(entry, username, UNAME_MAX_CHARS) == 0) {
             found = true;
         }
@@ -234,12 +235,20 @@ authenticate_t pfile_find_entry(int fd, const char *username,
         return AUTH_INVALID;
     }
 
+    if (offset != NULL) {
+        *offset = lseek(fd, 0, SEEK_CUR) - entry_len;
+        if (*offset == -1) {
+            return AUTH_FATAL;
+        }
+    }
+
     return AUTH_SUCCESS;
 }
 
 authenticate_t pfile_entry_exists(const char *username) {
     int fd;
-    size_t entry_len = UNAME_MAX_CHARS + get_salt_len() + get_hash_len();
+    size_t entry_len = UNAME_MAX_CHARS + 1 + get_salt_len()
+        + get_hash_len();
     char entry[entry_len];
     authenticate_t ret;
 
@@ -248,7 +257,7 @@ authenticate_t pfile_entry_exists(const char *username) {
         return ret;
     }
 
-    ret = pfile_find_entry(fd, username, entry, entry_len);
+    ret = pfile_find_entry(fd, username, entry, entry_len, NULL);
     if (ret != AUTH_SUCCESS) {
         close(fd);
         return ret;
@@ -260,7 +269,8 @@ authenticate_t pfile_entry_exists(const char *username) {
 
 authenticate_t pfile_entry_verify(const char *username, const char *password) {
     int fd;
-    size_t entry_len = UNAME_MAX_CHARS + get_salt_len() + get_hash_len();
+    size_t entry_len = UNAME_MAX_CHARS + 1 + get_salt_len()
+        + get_hash_len();
     char entry[entry_len];
     char *entry_hash;
     char *entry_salt;
@@ -273,13 +283,13 @@ authenticate_t pfile_entry_verify(const char *username, const char *password) {
         return ret;
     }
 
-    ret = pfile_find_entry(fd, username, entry, entry_len);
+    ret = pfile_find_entry(fd, username, entry, entry_len, NULL);
     if (ret != AUTH_SUCCESS) {
         close(fd);
         return ret;
     }
 
-    entry_salt = entry + UNAME_MAX_CHARS;
+    entry_salt = entry + UNAME_MAX_CHARS + 1;
 
     entry_hash = entry_salt + get_salt_len();
 
@@ -300,5 +310,71 @@ authenticate_t pfile_entry_verify(const char *username, const char *password) {
 
     close(fd);
     free_hash(hash);
+    return AUTH_SUCCESS;
+}
+
+authenticate_t pfile_update_role(const char *username, const role_t role) {
+    int fd;
+    size_t entry_len = UNAME_MAX_CHARS + 1 + get_salt_len()
+        + get_hash_len();
+    char entry[entry_len];
+    off_t offset;
+    off_t err;
+    char *c = entry;
+    ssize_t write_len;
+    authenticate_t ret;
+
+    ret = get_pfile(&fd, O_RDWR);
+    if (ret != AUTH_SUCCESS) {
+        return ret;
+    }
+
+    ret = pfile_find_entry(fd, username, entry, entry_len, &offset);
+    if (ret != AUTH_SUCCESS) {
+        close(fd);
+        return ret;
+    }
+
+    err = lseek(fd, offset, SEEK_SET);
+    if (err == -1) {
+        return AUTH_FATAL;
+    }
+
+    c += UNAME_MAX_CHARS;
+    *c = role;
+
+    write_len = write(fd, entry, entry_len);
+    if ((write_len != -1) && ((size_t) write_len != entry_len)) {
+        close(fd);
+        return AUTH_FATAL;
+    }
+
+    close(fd);
+    return AUTH_SUCCESS;
+}
+
+authenticate_t pfile_get_role(const char *username, role_t *role) {
+    int fd;
+    size_t entry_len = UNAME_MAX_CHARS + 1 + get_salt_len()
+        + get_hash_len();
+    char entry[entry_len];
+    char *c = entry;
+    authenticate_t ret;
+
+    ret = get_pfile(&fd, O_RDONLY);
+    if (ret != AUTH_SUCCESS) {
+        return ret;
+    }
+
+    ret = pfile_find_entry(fd, username, entry, entry_len, NULL);
+    if (ret != AUTH_SUCCESS) {
+        close(fd);
+        return ret;
+    }
+
+    c += UNAME_MAX_CHARS;
+    *role = *c;
+
+    close(fd);
     return AUTH_SUCCESS;
 }
