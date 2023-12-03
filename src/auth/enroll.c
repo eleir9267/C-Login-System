@@ -64,7 +64,7 @@ authenticate_t validate_cred(const char *username, const char *password) {
     // Check that it contains the required chars and only valid ASCII.
     i = 0;
     while ((i < STR_MAX) && (password[i] != '\0')) {
-        if (!((PW_ASCII_START < password[i]) && (password[i] < PW_ASCII_END))) {
+        if (!((PW_ASCII_START <= password[i]) && (password[i] <= PW_ASCII_END))) {
             return AUTH_BAD_CHAR;
         }
 
