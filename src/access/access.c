@@ -7,180 +7,116 @@
 
 #include <time.h>
 
-int get_client_access(const action_t action) {
-    switch (action) {
-        case ACCOUNT_BALANCE:
-        case INVESTMENT_PORTFOLIO:
-        case FA_CONTACT:
-        return VIEW;
-        break;
-        default:
+static int access_matrix[ROLE_MAX + 1][ACTION_MAX + 1] = {
+    // NO_ROLE
+    // ACCOUNT_BALANCE      INVESTMENT_PORTFOLIO    FA_CONTACT
+    {NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // FP_CONTACT           IA_CONTACT              MONEY_MARKET_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // DERIVATIVES_TRADING  INTEREST_INSTRUMENTS    PRIVATE_CONSUMER_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // CLIENT_INFO          CLIENT_ACCOUNT_CONTROL
+     NO_ACCESS,             NO_ACCESS},
+
+    // CLIENT
+    // ACCOUNT_BALANCE      INVESTMENT_PORTFOLIO    FA_CONTACT
+    {VIEW,                  VIEW,                   VIEW,
+    // FP_CONTACT           IA_CONTACT              MONEY_MARKET_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // DERIVATIVES_TRADING  INTEREST_INSTRUMENTS    PRIVATE_CONSUMER_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // CLIENT_INFO          CLIENT_ACCOUNT_CONTROL
+     NO_ACCESS,             NO_ACCESS},
+
+    // PREMIUM_CLIENT
+    // ACCOUNT_BALANCE      INVESTMENT_PORTFOLIO    FA_CONTACT
+    {VIEW,                  VIEW | MODIFY,          VIEW,
+    // FP_CONTACT           IA_CONTACT              MONEY_MARKET_INSTRUMENTS
+     VIEW,                  VIEW,                   NO_ACCESS,
+    // DERIVATIVES_TRADING  INTEREST_INSTRUMENTS    PRIVATE_CONSUMER_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // CLIENT_INFO          CLIENT_ACCOUNT_CONTROL
+     NO_ACCESS,             NO_ACCESS},
+
+    // FINANCIAL_PLANNER
+    // ACCOUNT_BALANCE      INVESTMENT_PORTFOLIO    FA_CONTACT
+    {VIEW,                  VIEW | MODIFY,          NO_ACCESS,
+    // FP_CONTACT           IA_CONTACT              MONEY_MARKET_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              VIEW,
+    // DERIVATIVES_TRADING  INTEREST_INSTRUMENTS    PRIVATE_CONSUMER_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              VIEW,
+    // CLIENT_INFO          CLIENT_ACCOUNT_CONTROL
+     NO_ACCESS,             NO_ACCESS},
+
+    // FINANCIAL_ADVISOR
+    // ACCOUNT_BALANCE      INVESTMENT_PORTFOLIO    FA_CONTACT
+    {VIEW,                  VIEW | MODIFY,          NO_ACCESS,
+    // FP_CONTACT           IA_CONTACT              MONEY_MARKET_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // DERIVATIVES_TRADING  INTEREST_INSTRUMENTS    PRIVATE_CONSUMER_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              VIEW,
+    // CLIENT_INFO          CLIENT_ACCOUNT_CONTROL
+     NO_ACCESS,             NO_ACCESS},
+
+    // INVESTMENT_ANALYST
+    // ACCOUNT_BALANCE      INVESTMENT_PORTFOLIO    FA_CONTACT
+    {VIEW,                  VIEW | MODIFY,          NO_ACCESS,
+    // FP_CONTACT           IA_CONTACT              MONEY_MARKET_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              VIEW,
+    // DERIVATIVES_TRADING  INTEREST_INSTRUMENTS    PRIVATE_CONSUMER_INSTRUMENTS
+     VIEW,                  VIEW,                   VIEW,
+    // CLIENT_INFO          CLIENT_ACCOUNT_CONTROL
+     NO_ACCESS,             NO_ACCESS},
+
+    // TECHNICAL_SUPPORT
+    // ACCOUNT_BALANCE      INVESTMENT_PORTFOLIO    FA_CONTACT
+    {NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // FP_CONTACT           IA_CONTACT              MONEY_MARKET_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // DERIVATIVES_TRADING  INTEREST_INSTRUMENTS    PRIVATE_CONSUMER_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // CLIENT_INFO          CLIENT_ACCOUNT_CONTROL
+     VIEW,                  REQUEST},
+
+    // TELLER
+    // ACCOUNT_BALANCE      INVESTMENT_PORTFOLIO    FA_CONTACT
+    {VIEW,                  VIEW,                   NO_ACCESS,
+    // FP_CONTACT           IA_CONTACT              MONEY_MARKET_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // DERIVATIVES_TRADING  INTEREST_INSTRUMENTS    PRIVATE_CONSUMER_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // CLIENT_INFO          CLIENT_ACCOUNT_CONTROL
+     NO_ACCESS,             NO_ACCESS},
+
+    // COMPLIANCE_OFFICER
+    // ACCOUNT_BALANCE      INVESTMENT_PORTFOLIO    FA_CONTACT
+    {VIEW,                  VIEW | VALIDATE,        NO_ACCESS,
+    // FP_CONTACT           IA_CONTACT              MONEY_MARKET_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // DERIVATIVES_TRADING  INTEREST_INSTRUMENTS    PRIVATE_CONSUMER_INSTRUMENTS
+     NO_ACCESS,             NO_ACCESS,              NO_ACCESS,
+    // CLIENT_INFO          CLIENT_ACCOUNT_CONTROL
+     NO_ACCESS,             NO_ACCESS},
+};
+
+int get_access(const role_t role, const action_t action) {
+    // Make sure we don't get an index out of bounds error.
+    if (!((0 <= role) && (role <= ROLE_MAX))
+        || !((0 <= action) && (action <= ACTION_MAX))) {
         return NO_ACCESS;
-        break;
     }
 
-    return NO_ACCESS;
-}
+    if (role == TELLER) {
+        time_t posix_time;
+        struct tm *time_ptr;
 
-int get_premium_client_access(const action_t action) {
-    switch (action) {
-        case ACCOUNT_BALANCE:
-        case FA_CONTACT:
-        case FP_CONTACT:
-        case IA_CONTACT:
-        return VIEW;
-        break;
-        case INVESTMENT_PORTFOLIO:
-        return VIEW | MODIFY;
-        break;
-        default:
-        return NO_ACCESS;
-        break;
-    }
-
-    return NO_ACCESS;
-}
-
-int get_financial_planner_access(const action_t action) {
-    switch (action) {
-        case ACCOUNT_BALANCE:
-        case MONEY_MARKET_INSTRUMENTS:
-        case PRIVATE_CONSUMER_INSTRUMENTS:
-        return VIEW;
-        break;
-        case INVESTMENT_PORTFOLIO:
-        return VIEW | MODIFY;
-        break;
-        default:
-        return NO_ACCESS;
-        break;
-    }
-
-    return NO_ACCESS;
-}
-
-int get_financial_advisor_access(const action_t action) {
-    switch (action) {
-        case ACCOUNT_BALANCE:
-        case PRIVATE_CONSUMER_INSTRUMENTS:
-        return VIEW;
-        break;
-        case INVESTMENT_PORTFOLIO:
-        return VIEW | MODIFY;
-        break;
-        default:
-        return NO_ACCESS;
-        break;
-    }
-
-    return NO_ACCESS;
-}
-
-int get_investment_analyst_access(const action_t action) {
-    switch (action) {
-        case ACCOUNT_BALANCE:
-        case MONEY_MARKET_INSTRUMENTS:
-        case DERIVATIVES_TRADING:
-        case INTEREST_INSTRUMENTS:
-        case PRIVATE_CONSUMER_INSTRUMENTS:
-        return VIEW;
-        break;
-        case INVESTMENT_PORTFOLIO:
-        return VIEW | MODIFY;
-        break;
-        default:
-        return NO_ACCESS;
-        break;
-    }
-
-    return NO_ACCESS;
-}
-
-int get_technical_support_access(const action_t action) {
-    switch (action) {
-        case CLIENT_INFO:
-        return VIEW;
-        break;
-        case CLIENT_ACCOUNT_CONTROL:
-        return REQUEST;
-        break;
-        default:
-        return NO_ACCESS;
-        break;
-    }
-
-    return NO_ACCESS;
-}
-
-int get_teller_access(const action_t action) {
-    time_t posix_time;
-    struct tm *time_ptr;
-
-    // Check that it is the appropriate time of day (9am - 5pm)...
-    posix_time = time(NULL);
-    time_ptr = localtime(&posix_time);
-    if ((9 <= time_ptr->tm_hour) && (time_ptr->tm_hour < 17)) {
-        switch (action) {
-            case ACCOUNT_BALANCE:
-            case INVESTMENT_PORTFOLIO:
-            return VIEW;
-            break;
-            default:
+        // Check that it is the appropriate time of day (9am - 5pm)...
+        posix_time = time(NULL);
+        time_ptr = localtime(&posix_time);
+        if (!((9 <= time_ptr->tm_hour) && (time_ptr->tm_hour < 17))) {
             return NO_ACCESS;
-            break;
         }
     }
 
-    return NO_ACCESS;
-}
-
-int get_compliance_officer_access(const action_t action) {
-    switch (action) {
-        case ACCOUNT_BALANCE:
-        return VIEW;
-        break;
-        case INVESTMENT_PORTFOLIO:
-        return VIEW | VALIDATE;
-        break;
-        default:
-        return NO_ACCESS;
-        break;
-    }
-
-    return NO_ACCESS;
-}
-
-int get_access(const role_t role, const action_t action) {
-    switch (role) {
-        case CLIENT:
-        return get_client_access(action);
-        break;
-        case PREMIUM_CLIENT:
-        return get_premium_client_access(action);
-        break;
-        case FINANCIAL_PLANNER:
-        return get_financial_planner_access(action);
-        break;
-        case FINANCIAL_ADVISOR:
-        return get_financial_advisor_access(action);
-        break;
-        case INVESTMENT_ANALYST:
-        return get_investment_analyst_access(action);
-        break;
-        case TECHNICAL_SUPPORT:
-        return get_technical_support_access(action);
-        break;
-        case TELLER:
-        return get_teller_access(action);
-        break;
-        case COMPLIANCE_OFFICER:
-        return get_compliance_officer_access(action);
-        break;
-        case NO_ROLE:
-        default:
-        return NO_ACCESS;
-        break;
-    }
-
-    return NO_ACCESS;
+    return access_matrix[role][action];
 }
