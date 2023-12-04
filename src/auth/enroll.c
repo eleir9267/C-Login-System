@@ -27,8 +27,8 @@ static const char* common_passwords[] = {
 };
 
 // regex pattern
-static const char* prohibited_format_pattern = "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)_([1-3]?[0-9])_[0-9]*"
-    "|/\\d{3,4}/-/\\d{3}/-/\\d{4}/"
+static const char* prohibited_format_pattern = "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)_([0-3]?[0-9])_[0-9]*"
+    "|\\d{3,4}-\\d{3}-\\d{4}"
     "|([A-Z]|[0-9]){3}_([A-Z]|[0-9]){3}";
 
 /**Checks if a credentials are valid.
@@ -163,7 +163,7 @@ authenticate_t validate_cred(const char *username, const char *password) {
     }
 
     // Compile regex.
-    errcode = regcomp(&prohibited_format_reg, prohibited_format_pattern, 0);
+    errcode = regcomp(&prohibited_format_reg, prohibited_format_pattern, REG_EXTENDED);
     if (errcode) {
         return AUTH_FATAL;
     }
@@ -173,6 +173,8 @@ authenticate_t validate_cred(const char *username, const char *password) {
     regfree(&prohibited_format_reg);
     if (status_reg == 0) {
         return AUTH_FORMAT;
+    } else if (status_reg != REG_NOMATCH) {
+        return AUTH_FATAL;
     }
 
     return AUTH_SUCCESS;

@@ -51,7 +51,6 @@ authenticate_t calculate_hash(const char *password, const size_t password_len,
         return AUTH_FATAL;
     }
 
-    // TODO: Choose appropriate hash algorithm
     err = EVP_DigestInit_ex(evp_context, HASH_ALG, NULL);
     if (err != 1) {
         EVP_MD_CTX_free(evp_context);
@@ -181,7 +180,7 @@ authenticate_t write_pfile_entry(const char *username, const char *password) {
         return ret;
     }
 
-    // (username)\0*(role)\0*(salt)(hash)
+    // (username)\0*(role)(salt)(hash)
     strncpy(c, username, MIN(UNAME_MAX_CHARS, STR_MAX - (c - entry)));
     c += MIN(UNAME_MAX_CHARS, STR_MAX - (c - entry));
 
@@ -213,7 +212,6 @@ authenticate_t write_pfile_entry(const char *username, const char *password) {
     return ret;
 }
 
-// TODO: Add offset so that entry can be overwritten.
 authenticate_t pfile_find_entry(int fd, const char *username,
                                 char *entry, size_t entry_len, off_t *offset) {
     ssize_t count_read;
@@ -225,7 +223,7 @@ authenticate_t pfile_find_entry(int fd, const char *username,
             continue;
         }
         // Stored in format
-        // (username)\0*(role)\0*(salt)(hash)
+        // (username)\0*(role)(salt)(hash)
         if(strncmp(entry, username, UNAME_MAX_CHARS) == 0) {
             found = true;
         }
