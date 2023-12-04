@@ -106,8 +106,8 @@ authenticate_t create_salt(char *buff, size_t len) {
 /**Creates a password file, or gets the fd for one if it already exists.
  * The resulting fd has read/write perms.
  * @param fd[out] The resulting file descriptor.
- * @param flags[in] The flags to pass to open (O_CREAT implied if file does not
- * exist).
+ * @param flags[in] The flags to pass to open (O_CREAT and O_WRONLY implied if
+ * file does not exist).
  * @return The authentication status of the request.
  */
 authenticate_t get_pfile(int *fd, int flags) {
@@ -116,18 +116,19 @@ authenticate_t get_pfile(int *fd, int flags) {
     char pfile_path[PATH_MAX];
     int n;
     struct stat stat_result;
-    mode_t perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
     int err;
 
-    n = snprintf(pfile_path, PATH_MAX, "%s/.fhpwdummy1", home_dir);
+    n = snprintf(pfile_path, PATH_MAX, "%s/.fhpwdummy2", home_dir);
     if ((n == -1) || (n >= PATH_MAX)) {
         return AUTH_FATAL;
     }
 
     err = stat(pfile_path, &stat_result);
     if (err == -1) {
+        mode_t perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
+
         // Create
-        *fd = open(pfile_path, flags | O_CREAT, perms);
+        *fd = open(pfile_path, flags | O_CREAT | O_WRONLY, perms);
         if (*fd == -1) {
             return AUTH_FATAL;
         }
@@ -142,7 +143,7 @@ authenticate_t get_pfile(int *fd, int flags) {
         // File exists
         // TODO: Dummy could have been created before first run. How do you
         // handle this??
-        *fd = open(pfile_path, flags, perms);
+        *fd = open(pfile_path, flags);
         if (*fd == -1) {
             return AUTH_FATAL;
         }
