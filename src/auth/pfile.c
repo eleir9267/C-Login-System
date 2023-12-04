@@ -118,7 +118,7 @@ authenticate_t get_pfile(int *fd, int flags) {
     struct stat stat_result;
     int err;
 
-    n = snprintf(pfile_path, PATH_MAX, "%s/.fhpwdummy2", home_dir);
+    n = snprintf(pfile_path, PATH_MAX, "%s/.finvestholdings", home_dir);
     if ((n == -1) || (n >= PATH_MAX)) {
         return AUTH_FATAL;
     }
